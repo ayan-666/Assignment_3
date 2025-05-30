@@ -39,6 +39,27 @@ class ImageProcessor:
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load image: {str(e)}")
             return False
+        
+    def crop_image(self, x1, y1, x2, y2):
+        """setting co-ordinates from where user can crop the particular image"""
+        try:
+            # Validate coordinates
+            if not self.current_image is None:
+                h, w = self.current_image.shape[:2]
+                x1, x2 = max(0, min(x1, x2)), min(w, max(x1, x2))
+                y1, y2 = max(0, min(y1, y2)), min(h, max(y1, y2))
+                
+                if x2 <= x1 or y2 <= y1:
+                    raise ValueError("Invalid crop dimensions")
+                
+                # Save for undo operation if the user intends any changes
+                self.undo_stack.append(self.current_image.copy())
+                self.current_image = self.current_image[y1:y2, x1:x2]
+                return True
+        except Exception as e:
+            messagebox.showerror("Error", f"Crop failed: {str(e)}")
+            return False
+
 
 class ImageDisplay:
 
