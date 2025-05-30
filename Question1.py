@@ -116,8 +116,49 @@ class ImageProcessor:
 
 
 class ImageDisplay:
+     """Handles image display and canvas operations"""
+    def __init__(self, canvas):
+        self.canvas = canvas
+        self.photo = None
+        self.display_image = None
+        self.max_display_size = 600
+
+    def update_display(self, image):
+        """View the new image"""
+        try:
+            if image is None:
+                raise ValueError("No image to display")
+            
+            # Calculate display size while maintaining aspect ratio
+            h, w = image.shape[:2]
+            scale = min(self.max_display_size/w, self.max_display_size/h)
+            display_size = (int(w * scale), int(h * scale))
+            
+            # Resize and convert for display
+            display_img = cv2.resize(image, display_size)
+            display_img = cv2.cvtColor(display_img, cv2.COLOR_BGR2RGB)
+            self.display_image = Image.fromarray(display_img)
+            self.photo = ImageTk.PhotoImage(self.display_image)
+            
+            # Update the view for the image
+            self.canvas.delete("all")
+            self.canvas.create_image(0, 0, image=self.photo, anchor="nw")
+            self.canvas.config(width=display_size[0], height=display_size[1])
+        except Exception as e:
+            messagebox.showerror("Error", f"Display failed: {str(e)}")
+
+    def draw_rectangle(self, start_x, start_y, current_x, current_y, rect_id):
+        """Draw cropping rectangle on image"""
+        if rect_id:
+            self.canvas.delete(rect_id)
+        return self.canvas.create_rectangle(
+            start_x, start_y, current_x, current_y,
+            outline="red", dash=(4, 4)
+        )
+
 
 class ImageEditorApp:
+    
 
 
 if __name__ == "__main__":
