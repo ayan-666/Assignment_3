@@ -59,6 +59,60 @@ class ImageProcessor:
         except Exception as e:
             messagebox.showerror("Error", f"Crop failed: {str(e)}")
             return False
+        
+    def resize_image(self, scale):
+        """Resize image"""
+        """Handling error if no image is loaded"""
+        try:
+            if self.current_image is None:
+                raise ValueError("No image loaded")
+            if not 0.1 <= scale <= 2.0:
+                raise ValueError("Scale must be between 0.1 and 2.0")
+            
+            h, w = self.original_image.shape[:2]
+            new_size = (int(w * scale), int(h * scale))
+            self.current_image = cv2.resize(self.original_image, new_size, interpolation=cv2.INTER_AREA)
+            return True
+        except Exception as e:
+            messagebox.showerror("Error", f"Resize failed: {str(e)}")
+            return False
+        
+
+    def apply_grayscale(self):
+        """Apply grayscale filter to the loaded image"""
+        try:
+            if self.current_image is None:
+                raise ValueError("No image loaded")
+            
+            self.undo_stack.append(self.current_image.copy())
+            self.current_image = cv2.cvtColor(self.current_image, cv2.COLOR_BGR2GRAY)
+            if len(self.current_image.shape) == 2:
+                self.current_image = cv2.cvtColor(self.current_image, cv2.COLOR_GRAY2BGR)
+            return True
+        except Exception as e:
+            messagebox.showerror("Error", f"Grayscale failed: {str(e)}")
+            return False
+
+    def save_image(self, file_path):
+        """Save current image to specified path and handling error here"""
+        try:
+            if self.current_image is None:
+                raise ValueError("No image to save")
+            if not file_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+                raise ValueError("Unsupported save format")
+            
+            cv2.imwrite(file_path, self.current_image)
+            return True
+        except Exception as e:
+            messagebox.showerror("Error", f"Save failed: {str(e)}")
+            return False
+
+    def undo(self):
+        """Revert to previous image state if the user intends"""
+        if self.undo_stack:
+            self.current_image = self.undo_stack.pop()
+            return True
+        return False
 
 
 class ImageDisplay:
