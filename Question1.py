@@ -13,6 +13,32 @@ import cv2
 import numpy as np
 
 class ImageProcessor:
+    """Handling all image processing operations using OpenCV with some functions"""
+    def __init__(self):
+        self.original_image = None
+        self.current_image = None
+        self.undo_stack = []
+
+    def load_image(self, file_path):
+        """Load and validate image from file path using is_file function and checking if it matches the ending"""
+        try:
+            # Validate file path
+            if not Path(file_path).is_file():
+                raise FileNotFoundError("File does not exist")
+            if not file_path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
+                raise ValueError("Unsupported image format")
+
+            # Read image with OpenCV
+            self.original_image = cv2.imread(file_path)
+            if self.original_image is None:
+                raise ValueError("Failed to load image")
+            
+            self.current_image = self.original_image.copy()
+            self.undo_stack = []  # Reset undo stack on new image load
+            return True
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load image: {str(e)}")
+            return False
 
 class ImageDisplay:
 
