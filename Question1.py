@@ -11,6 +11,11 @@ import tkinter as tk
 from tkinter import filedialog, ttk, messagebox
 import cv2
 import numpy as np
+from PIL import Image, ImageTk
+import os
+from pathlib import Path
+import uuid
+
 
 class ImageProcessor:
     """Handling all image processing operations using OpenCV with some functions"""
@@ -156,9 +161,149 @@ class ImageDisplay:
             outline="red", dash=(4, 4)
         )
 
-
 class ImageEditorApp:
+     """Main application class coordinating UI and image processing."""
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Image Editor")
+        self.root.geometry("1200x800")
+        
+        self.image_processor = ImageProcessor()
+        self.start_x = None
+        self.start_y = None
+        self.rect_id = None
+        self.cropping = False
+        
+        self.setup_ui()
+        self.bind_shortcuts()
+
+    def setup_ui(self):
+        """Set up the main UI components."""
+        self.main_frame = ttk.Frame(self.root)
+        self.main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+        # Canvas for image display
+        self.canvas = tk.Canvas(self.main_frame, bg="gray")
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.image_display = ImageDisplay(self.canvas)
+
+        # Control panel
+        self.control_frame = ttk.Frame(self.main_frame, width=200)
+        self.control_frame.pack(side=tk.RIGHT, fill=tk.Y, padx=10)
+
+        # Buttons
+        ttk.Button(self.control_frame, text="Load Image (Ctrl+O)", command=self.load_image).pack(fill=tk.X, pady=5)
+        ttk.Button(self.control_frame, text="Save Image (Ctrl+S)", command=self.save_image).pack(fill=tk.X, pady=5)
+        ttk.Button(self.control_frame, text="Grayscale", command=self.apply_grayscale).pack(fill=tk.X, pady=5)
+        ttk.Button(self.control_frame, text="Undo (Ctrl+Z)", command=self.undo).pack(fill=tk.X, pady=5)
+
+        # Resize slider
+        ttk.Label(self.control_frame, text="Resize Scale").pack(pady=5)
+        self.scale_var = tk.DoubleVar(value=1.0)
+        self.scale = ttk.Scale(self.control_frame, from_=0.1, to=2.0, orient=tk.HORIZONTAL,
+                             variable=self.scale_var, command=self.resize_image)
+        self.scale.pack(fill=tk.X, pady=5)
+
+        # Canvas bindings for cropping
+        self.canvas.bind("<ButtonPress-1>", self.start_crop)
+        self.canvas.bind("<B1-Motion>", self.draw_crop)
+        self.canvas.bind("<ButtonRelease-1>", self.end_crop)
+
+    def bind_shortcuts(self):
+        """Bind keyboard shortcuts."""
+        self.root.bind("<Control-z>", lambda event: self.undo())
+        self.root.bind("<Control-o>", lambda event: self.load_image())
+        self.root.bind("<Control-s>", lambda event: self.save_image())
+
+    def load_image(self):
+        """Handle image loading with file dialog."""
+        file_path = filedialog.askopenfilename(filetypes=[("Image files", "*.png *.jpg *.jpeg *.bmp")])
+        if file_path and self.image_processor.load_image(file_path):
+            self.image_display.update_display(self.image_processor.current_image)
+
+    def start_crop(self, event):
+        """Start cropping operation."""
+        if self.image_processor.current_image is None:
+            return
+        self.start_x = self.canvas.canvasx(event.x)
+        self.start_y = self.canvas.canvasy(event.y)
+        self.cropping = True
+        if self.rect_id:
+            self.canvas.delete(self.rect_id)
+
+    def draw_crop(self, event):
+        """Draw cropping rectangle during mouse drag."""
+        if not self.cropping:
+            return
+        current_x = self.canvas.canvasx(event.x)
+        current_y = self.canvas.canvasy(event.y)
+        self.rect_id = self.image_display.draw_rectangle(
+            self.start_x, self.start_y, current_x, current_y, self.rect_id
+        )
+
+    def end_crop(self, event):
+        """Complete cropping operation."""
+        if not self.cropping:
+            return
+        self.cropping = False
+        current_x = self.canvas.canvasx(event.x)
+        current_y = self.canvas.canvasy(event.y)
+
+        try:
+            # Convert canvas coordinates to image coordinates
+            h, w = self.image_processor.current_image.shape[:2]
+            canvas_w, canvas_h = self.canvas.winfo_width(), self.canvas.winfo_height()
+            scale = min(canvas_w/w, canvas_h/h)
+            
+            x1 = int(min(self.start_x, current_x) / scale)
+            y1 = int(min(self.start_y, current_y) / scale)
+            x2 = int(max(self.start_x, current_x) / scale)
+            y2 = int(max(self.start_y, current_y) / scale)
+
+            if self.image_processor.crop_image(x1, y1, x2, y2):
+                self.image_display.update_display(self.image_processor.current_image)
+        except Exception as e:
+            messagebox.showerror("Error", f"Crop failed: {str(e)}")
+        finally:
+            if self.rect_id:
+                self.canvas.delete(self.rect_id)
+                self.rect_id = None
+
+    def resize_image(self, event=None):
+        """Handle image resizing from slider."""
+        if self.image_processor.resize_image(self.scale_var.get()):
+            self.image_display.update_display(self.image_processor.current_image)
+
+    def apply_grayscale(self):
+        """Apply grayscale filter and update display."""
+        if self.image_processor.apply_grayscale():
+            self.image_display.update_display(self.image_processor.current_image)
+
+    def save_image(self):
+        """Handle image saving with file dialog."""
+        file_path = filedialog.asksaveasfilename(
+            defaultextension=".png",
+            filetypes=[("PNG files", "*.png"), ("JPEG files", "*.jpg")]
+        )
+        if file_path:
+            self.image_processor.save_image(file_path)
+
+    def undo(self):
+        """Handle undo operation."""
+        if self.image_processor.undo():
+            self.image_display.update_display(self.image_processor.current_image)
+
+    def run(self):
+        """Start the main application loop."""
+        self.root.mainloop()
     
-
-
+    
 if __name__ == "__main__":
+    try:
+        root = tk.Tk()
+        app = ImageEditorApp(root)
+        app.run()
+    except Exception as e:
+        messagebox.showerror("Fatal Error", f"Application failed to start: {str(e)}")
+    
+    
