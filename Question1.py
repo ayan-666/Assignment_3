@@ -59,6 +59,23 @@ class ImageProcessor:
         except Exception as e:
             messagebox.showerror("Error", f"Crop failed: {str(e)}")
             return False
+        
+    def resize_image(self, scale):
+        """Resize image"""
+        """Handling error if no image is loaded"""
+        try:
+            if self.current_image is None:
+                raise ValueError("No image loaded")
+            if not 0.1 <= scale <= 2.0:
+                raise ValueError("Scale must be between 0.1 and 2.0")
+            
+            h, w = self.original_image.shape[:2]
+            new_size = (int(w * scale), int(h * scale))
+            self.current_image = cv2.resize(self.original_image, new_size, interpolation=cv2.INTER_AREA)
+            return True
+        except Exception as e:
+            messagebox.showerror("Error", f"Resize failed: {str(e)}")
+            return False
 
 
 class ImageDisplay:
