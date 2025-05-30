@@ -161,7 +161,7 @@ class ImageDisplay:
             outline="red", dash=(4, 4)
         )
 
-class ImageEditorApp:
+class ImageEditorApp: 
      """Main application class coordinating UI and image processing."""
     def __init__(self, root):
         self.root = root
@@ -296,7 +296,7 @@ class ImageEditorApp:
     def run(self):
         """Start the main application loop."""
         self.root.mainloop()
-    
+    #Complete Image Editor App
     
 if __name__ == "__main__":
     try:
