@@ -10,6 +10,7 @@ pygame.init()
 base = r"C:\Users\pgash\Desktop\CDU STUDY\SEM 01\Softwear Now\Asigment 02\Assignment_3\Question_02\assets"
 
 # ————————————————————— Setup —————————————————————
+pygame.display.set_caption("Blade of the Fallen")
 SCREEN_W, SCREEN_H = 800, 400
 screen = pygame.display.set_mode((SCREEN_W, SCREEN_H))
 clock = pygame.time.Clock()
@@ -53,7 +54,7 @@ idle_frames   = load_animation(os.path.join(base, "player", "idle_sheet.png"),  
 run_frames    = load_animation(os.path.join(base, "player", "run_sheet.png"),      8)
 jump_frames   = load_animation(os.path.join(base, "player", "jump_sheet.png"),     4)
 attack_frames = load_animation(os.path.join(base, "player", "light_atk_sheet.png"), 6)
-hurt_frames   = load_animation(os.path.join(base, "player", "hurt_sheet.png"),     3)
+death_frames   = load_animation(os.path.join(base, "player", "death.png"),     3)
 
 # Load Flying Enemy Animations
 flying_base = os.path.join(base, "enemies", "Flying_eye")
@@ -66,6 +67,7 @@ class Player:
     def __init__(self):
         self.max_health = 100 # Player max health
         self.current_health = 100 # Player health
+        self.dead = False
 
         # All animation frame lists already loaded elsewhere
         self.anims = {
@@ -73,7 +75,7 @@ class Player:
             "run":    run_frames,
             "jump":   jump_frames,
             "attack": attack_frames,
-            "hurt":   hurt_frames
+            "death":  death_frames
         }
 
         # Milliseconds per frame for each state
@@ -82,7 +84,7 @@ class Player:
             "run":     40,
             "jump":   100,
             "attack":  80,
-            "hurt":   120
+            "death":   100
         }
 
         # Initial state
@@ -91,6 +93,8 @@ class Player:
         self.frames = self.anims[self.state]
         self.idx = 0
         self.timer = 0
+        
+
         
 
         # Starting image and position
@@ -198,7 +202,7 @@ class Player:
         
     def draw_health_bar(self, surface):
         bar_width = 150
-        bar_height = 30
+        bar_height = 20
         fill = (self.current_health / self.max_health) * bar_width
         border_rect = pygame.Rect(10, 10, bar_width, bar_height)
         fill_rect = pygame.Rect(10, 10, fill, bar_height)
@@ -242,6 +246,7 @@ player = Player()
 enemies = []  # List to hold multiple enemies
 spawn_timer = 0
 spawn_interval = 2000  # Spawn every 2000 milliseconds (2 seconds)
+game_over = False
 
 # ————————————————————— Main Loop —————————————————————
 running = True
@@ -268,7 +273,7 @@ while running:
             running = False
     
     spawn_timer += dt
-    if spawn_timer >= spawn_interval:
+    if not player.dead and spawn_timer >= spawn_interval:
         spawn_timer = 0
         spawn_x = SCREEN_W + 50  # Start just off the right edge
         spawn_y = random.randint(50, 200)  # Random vertical position
@@ -290,7 +295,14 @@ while running:
             enemy.hit()
             player.current_health -= 10  # Deal damage
             if player.current_health <= 0:
-                print("Player died!")  # Or handle game over
+                player.current_health = 0
+                player.dead = True
+                player.state = "death"
+                player.frames = player.anims["death"]
+                player.speed  = player.state_speeds["death"]
+                player.idx    = 0
+                # Stop further enemy spawns:
+                game_over = True
 
         enemy.draw(screen)
 
@@ -298,6 +310,15 @@ while running:
         if enemy.rect.right < 0 or enemy.dead:
             enemies.remove(enemy)
 
+    if player.dead:
+        # draw Game Over text
+        font = pygame.font.SysFont("Arial", 150, bold=True)
+        text = font.render("GAME OVER", True, (255,0,0))
+        r = text.get_rect(center=(SCREEN_W//2, SCREEN_H//2))
+        screen.blit(text, r)
+
+        pygame.display.flip()
+        continue  # skips the rest of the loop, no more spawns or movement
 
 
     pygame.display.flip()
